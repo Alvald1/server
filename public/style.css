@@ -1,0 +1,10 @@
+.main {
+  margin-top: 20px;
+  text-align: center;
+}
+table {
+  margin: auto;
+}
+td {
+  border: 1px solid black;
+}
