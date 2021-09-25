@@ -9,18 +9,29 @@ app.use(express.static("public"));
 
 app.get("/getMarks", (req, res) => {
   console.log(req.query.name);
-  db.all(
-    "SELECT * FROM student s, Subj su, Marks m WHERE s.id=m.studentId AND m.subjId=su.id AND s.fio=?",
-    [req.query.name],
-    function (err, rows) {
+  if (req.query.name == undefined) {
+    db.all("SELECT s.fio FROM student s", function (err, rows) {
       if (err) {
         console.log(err);
       }
 
       console.log(rows);
       res.send(rows);
-    }
-  );
+    });
+  } else {
+    db.all(
+      "SELECT s.fio, su.name, m._mark FROM student s, Subj su, Marks m WHERE s.id=m.studentId AND m.subjId=su.id AND s.fio=?",
+      [req.query.name],
+      function (err, rows) {
+        if (err) {
+          console.log(err);
+        }
+
+        console.log(rows);
+        res.send(rows);
+      }
+    );
+  }
 });
 
 app.listen(port, () => {

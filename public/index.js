@@ -19,8 +19,10 @@ function get(url) {
 
   xhr.send(null);
 }
-
-butt.onclick = function () {
+but_a.onclick = function () {
+  get("/getMarks");
+};
+but_s.onclick = function () {
   let val = document.getElementById("elem1").value;
   get("/getMarks?name=" + val);
 };
