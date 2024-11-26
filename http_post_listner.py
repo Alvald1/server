@@ -3,9 +3,7 @@ from fastapi.responses import PlainTextResponse
 import json
 from redis import Redis
 
-from cryptography.hazmat.backends import default_backend  
-from cryptography.hazmat.primitives import serialization  
-from cryptography.hazmat.primitives.asymmetric import rsa  
+from rsa_manager import gen_pair_pem
 
 # This module converts binary data to hexadecimal
 from binascii import hexlify
@@ -53,23 +51,9 @@ async def result(
             if auth_redis.exists(key):
                 return json.dumps({'massege': 'already auth', 'code': 1})
             else:
-                private_key = rsa.generate_private_key(  
-                    public_exponent=65537,  
-                    key_size=1024,  
-                    backend=default_backend()  
-                )  
-                pem_priv = private_key.private_bytes(  
-                    encoding=serialization.Encoding.PEM,  
-                    format=serialization.PrivateFormat.PKCS8,  
-                    encryption_algorithm=serialization.NoEncryption()  
-                ).decode('utf-8')   
-                public_key = private_key.public_key()
-                pem_pub = public_key.public_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo
-                ).decode('utf-8')  
-                auth_redis.hset(key, mapping={'pem_priv': pem_priv, 'pem_pub': pem_pub})
-            return json.dumps({'massege': pem_pub, 'code': 0})
+                pair_pem=gen_pair_pem(1024)
+                auth_redis.hset(key, mapping=pair_pem)
+            return json.dumps({'massege': pair_pem.get('pem_pub'), 'code': 0})
         elif status=='off':
             if not auth_redis.exists(key):
                 return json.dumps({'massege': 'not found', 'code': 2})
