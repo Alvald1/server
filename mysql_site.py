@@ -61,6 +61,13 @@ def find_name_(user_id: int, device_id: str):
             for item in data.values():
                 if item.get("id") == device_id:
                     return item.get("name")
+            return False
 
     except Error as e:
         print(f"Error: {e}")
+
+
+def find_name(user_id_: str, device_id_: str):
+    user_id = find_user_id(user_id_)
+    if user_id:
+        return find_name_(user_id, device_id_)
