@@ -54,7 +54,7 @@ async def result(
         # Сохраняем данные
         if status == 'on':
             if auth_redis.exists(key):
-                return json.dumps({'massage': 'already auth', 'code': 1})
+                return json.dumps({'message': 'already auth', 'code': 1})
             else:
                 user_id = key[:23]
                 device_id = key[23:]
@@ -62,15 +62,15 @@ async def result(
                 if name:
                     pair_pem = gen_pair_pem(1024)
                     auth_redis.hset(key, mapping=pair_pem)
-                    return json.dumps({'massage': pair_pem.get(
+                    return json.dumps({'message': pair_pem.get(
                         'pem_pub'), 'code': 0, 'name': name})
-                return json.dumps({'massage': 'not found', 'code': 2})
+                return json.dumps({'message': 'not found', 'code': 2})
         elif status == 'off':
             if not auth_redis.exists(key):
-                return json.dumps({'massage': 'not found', 'code': 2})
+                return json.dumps({'message': 'not found', 'code': 2})
             else:
                 auth_redis.hdel(key, 'pem_pub', 'pem_priv')
-                return json.dumps({'massage': 'deleted', 'code': 0})
+                return json.dumps({'message': 'deleted', 'code': 0})
 
     # Если параметры не соответствуют ни одному из ожидаемых сценариев
     else:
