@@ -4,6 +4,7 @@ import json
 from redis import Redis
 
 from rsa_manager import gen_pair_pem
+from mysql_site import find_name
 
 # This module converts binary data to hexadecimal
 
@@ -53,12 +54,17 @@ async def result(
         # Сохраняем данные
         if status == 'on':
             if auth_redis.exists(key):
-
                 return json.dumps({'massege': 'already auth', 'code': 1})
             else:
-                pair_pem = gen_pair_pem(1024)
-                auth_redis.hset(key, mapping=pair_pem)
-            return json.dumps({'massege': pair_pem.get('pem_pub'), 'code': 0})
+                user_id = key[:23]
+                device_id = key[23:]
+                name = find_name(user_id, device_id)
+                if name:
+                    pair_pem = gen_pair_pem(1024)
+                    auth_redis.hset(key, mapping=pair_pem)
+                    return json.dumps({'massege': pair_pem.get(
+                        'pem_pub'), 'code': 0, 'name': name})
+                return json.dumps({'massege': 'not found', 'code': 2})
         elif status == 'off':
             if not auth_redis.exists(key):
                 return json.dumps({'massege': 'not found', 'code': 2})
