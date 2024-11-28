@@ -40,7 +40,7 @@ def find_user_id(user_id: str):
         print(f"Error: {e}")
 
 
-def find_name_(user_id: int, device_id: str):
+def find_name_(user_id: int, device_id: str, status: str):
     try:
         connection = mysql.connector.connect(
             host=DB_HOST,
@@ -56,19 +56,32 @@ def find_name_(user_id: int, device_id: str):
                 (user_id,
                  ))
             result = cursor.fetchone()
-            cursor.close()
             data = phpserialize.loads(result[2].encode(), decode_strings=True)
+            name = False
             for item in data.values():
                 if item.get("id") == device_id:
-                    return item.get("name")
-            return False
+                    name = item.get("name")
+                    item.update({"status": status})
+            if name:
+                res = phpserialize.dumps(data).decode("utf-8")
+                cursor.execute(
+                    '''
+                        UPDATE wp_usermeta
+                        SET meta_value = %s
+                        WHERE user_id = %s AND meta_key = %s
+                    ''',
+                    (res, user_id, "devices")
+                )
+                connection.commit()
+            cursor.close()
+            return name
 
     except Error as e:
         print(f"Error: {e}")
 
 
-def find_name(user_id_: str, device_id_: str):
+def find_name(user_id_: str, device_id_: str, status: str):
     user_id = find_user_id(user_id_)
     if user_id:
-        return find_name_(user_id, device_id_)
+        return find_name_(user_id, device_id_, status)
     return False

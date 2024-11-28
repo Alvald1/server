@@ -52,13 +52,14 @@ async def result(
                 detail=f"Unexpected parameters: {', '.join(form_keys - {'key', 'status'})}"
             )
         # Сохраняем данные
+        user_id = key[:23]
+        device_id = key[23:]
+
         if status == 'on':
             if auth_redis.exists(key):
                 return json.dumps({'message': 'already auth', 'code': 1})
             else:
-                user_id = key[:23]
-                device_id = key[23:]
-                name = find_name(user_id, device_id)
+                name = find_name(user_id, device_id, 'online')
                 if name:
                     pair_pem = gen_pair_pem(1024)
                     auth_redis.hset(key, mapping=pair_pem)
@@ -69,6 +70,7 @@ async def result(
             if not auth_redis.exists(key):
                 return json.dumps({'message': 'not found', 'code': 2})
             else:
+                find_name(user_id, device_id, 'offline')
                 auth_redis.hdel(key, 'pem_pub', 'pem_priv')
                 return json.dumps({'message': 'deleted', 'code': 0})
 
