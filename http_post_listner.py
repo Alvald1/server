@@ -3,7 +3,7 @@ from fastapi.responses import PlainTextResponse
 import json
 from redis import Redis
 
-from rsa_manager import gen_pair_pem
+from rsa_manager import gen_pair_pem, decrypt_message
 from mysql_site import find_name
 
 # This module converts binary data to hexadecimal
@@ -20,31 +20,32 @@ auth_redis = Redis(host='localhost', port=6581, db=2)
 @app.post("/api", response_class=PlainTextResponse)
 async def result(
     request: Request,
-    foo: str = Form(None),  # Сделать параметры необязательными
-    bar: str = Form(None),  # Сделать параметры необязательными
-    key: str = Form(None),  # Сделать параметры необязательными
+    message: str = Form(None),  # Сделать параметры необязательными
+    key: str = Form(),  # Сделать параметры необязательными
     status: str = Form(None),  # Сделать параметры необязательными
 ):
     # Получаем все параметры из тела запроса
     form_data = await request.form()
     form_keys = set(form_data.keys())
 
+    user_id = key[:23]
+    device_id = key[23:]
+
     # Проверяем сценарий для foo и bar
-    if {"foo", "bar"}.issubset(form_keys):
-        if form_keys - {"foo", "bar"}:
+    if {"message"}.issubset(form_keys):
+        if form_keys - {"key", "message"}:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unexpected parameters: {', '.join(form_keys - {'foo', 'bar'})}"
+                detail=f"Unexpected parameters: {', '.join(form_keys - {'key', 'message'})}"
             )
-        # Сохраняем данные
-        data = {"foo": foo, "bar": bar}
-        with open("data.json", "a") as f:
-            json.dump(data, f)
-            f.write("\n")
-        return "Processed foo and bar"
+        if not auth_redis.exists(key):
+            return json.dumps({'message': 'not found', 'code': 2})
+        pem_priv = auth_redis.hget(key, 'pem_priv')
+        data = decrypt_message(message, pem_priv)
+        return json.dumps({'message': data, 'code': 0})
 
     # Проверяем сценарий для key и status
-    elif {"key", "status"}.issubset(form_keys):
+    elif {"status"}.issubset(form_keys):
 
         if form_keys - {"key", "status"}:
             raise HTTPException(
@@ -52,8 +53,6 @@ async def result(
                 detail=f"Unexpected parameters: {', '.join(form_keys - {'key', 'status'})}"
             )
         # Сохраняем данные
-        user_id = key[:23]
-        device_id = key[23:]
 
         if status == 'on':
             if auth_redis.exists(key):
@@ -61,7 +60,7 @@ async def result(
             else:
                 name = find_name(user_id, device_id, 'online')
                 if name:
-                    pair_pem = gen_pair_pem(1024)
+                    pair_pem = gen_pair_pem(2048)
                     auth_redis.hset(key, mapping=pair_pem)
                     return json.dumps({'message': pair_pem.get(
                         'pem_pub'), 'code': 0, 'name': name})
@@ -78,5 +77,5 @@ async def result(
     else:
         raise HTTPException(
             status_code=400,
-            detail="Invalid parameters. Expected either 'foo' and 'bar' or 'key' and 'status'."
+            detail="Invalid parameters. Expected either 'key' and 'message' or 'key' and 'status'."
         )
