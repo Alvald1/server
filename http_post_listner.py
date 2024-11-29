@@ -31,7 +31,6 @@ async def result(
     user_id = key[:23]
     device_id = key[23:]
 
-    # Проверяем сценарий для foo и bar
     if {"message"}.issubset(form_keys):
         if form_keys - {"key", "message"}:
             raise HTTPException(
@@ -44,7 +43,6 @@ async def result(
         data = decrypt_message(message, pem_priv)
         return json.dumps({'message': data, 'code': 0})
 
-    # Проверяем сценарий для key и status
     elif {"status"}.issubset(form_keys):
 
         if form_keys - {"key", "status"}:
