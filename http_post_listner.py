@@ -2,6 +2,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 import json
 from redis import Redis
+import hashlib
 
 from rsa_manager import gen_pair_pem, decrypt_message
 from mysql_site import find_name
@@ -40,8 +41,21 @@ async def result(
         if not auth_redis.exists(key):
             return json.dumps({'message': 'not found', 'code': 2})
         pem_priv = auth_redis.hget(key, 'pem_priv')
-        data = decrypt_message(message, pem_priv)
-        return json.dumps({'message': data, 'code': 0})
+        data = json.loads(decrypt_message(message, pem_priv))
+        minute = data.pop('minute', None)
+        data = json.dumps(data)
+
+        hash_object = hashlib.sha256(data.encode())
+        hash_hex = hash_object.hexdigest()
+
+        fields = {
+            'data': data,
+            'minute': minute
+        }
+        if main_redis.hset(hash_hex, mapping=fields):
+            return json.dumps({'message': 'delivered', 'code': 0})
+        else
+        return json.dumps({'message': 'dupplicate', 'code': 1})
 
     elif {"status"}.issubset(form_keys):
 
